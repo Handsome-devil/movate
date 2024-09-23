@@ -1,0 +1,127 @@
+import csv
+import requests
+import dotenv
+
+config = dotenv.dotenv_values()
+api_key = config['ZABBIX_API_TOKEN']
+
+def create_host(api_key, hostname, Visiblename, ip_address, Group1, Group2, serialnumber, url):
+    payload = {
+        "jsonrpc": "2.0",
+  "method": "host.create",
+  "params": {
+    "host": hostname,
+    "name": Visiblename,
+    "interfaces": [
+      {
+        "type": 2,
+        "main": 1,
+        "useip": 1,
+        "ip": ip_address,
+        "dns": "",
+        "port": "161",
+        "details": {
+          "version": 2,
+          "community": "a3Ds0agg"
+        }
+      }
+    ],
+    "groups": [
+      {
+        "groupid": Group1
+      },
+      {
+        "groupid": Group2
+      }
+    ],
+    "templates": [
+      {
+        "templateid": "32864"
+      }
+    ],
+    "inventory": {
+      "name": Visiblename,
+      "alias": hostname,
+      "os": "wired-18-1-07",
+      "serialno_a": serialnumber,
+      "model": "MX64W",
+      "url_a": url
+    },
+    "proxy_hostid": "32568"
+        },
+        "auth": api_key,
+        "id": 1
+    }
+    response = requests.post(config['ZABBIX_URL'], json=payload)
+    return response.json()
+
+americas = "127"
+apac = "122"
+emea = "120"
+ar = "128"
+au = "149"
+ca = "126"
+cb = "130"
+cl = "129"
+de_shop = "98"
+de_hq = "136"
+es = "66"
+hu = "135"
+ind = "123"
+it_shop  = "119"
+it_hq = "134"
+nl = "102"
+pl = "124"
+pt = "67"
+uk_shop = "101"
+uk_hq = "140"
+us = "125"
+
+group_mapping = {
+    "AR": {"Group1": americas, "Group2": ar},
+    "AU": {"Group1": apac, "Group2": au},
+    "CA": {"Group1": americas, "Group2": ca},
+    "CB": {"Group1": americas, "Group2": cb},
+    "CL": {"Group1": americas, "Group2": cl},
+    "DE_Shop": {"Group1": emea, "Group2": de_shop},
+    "DE_HQ": {"Group1": emea, "Group2": de_hq},
+    "ES": {"Group1": emea, "Group2": es},
+    "HU": {"Group1": emea, "Group2": hu},
+    "IND": {"Group1": apac, "Group2": ind},
+    "IT_Shop": {"Group1": emea, "Group2": it_shop},
+    "IT_HQ": {"Group1": emea, "Group2": it_hq},
+    "NL": {"Group1": emea, "Group2": nl},
+    "PL": {"Group1": emea, "Group2": pl},
+    "PT": {"Group1": emea, "Group2": pt},
+    "UK_Shop": {"Group1": emea, "Group2": uk_shop},
+    "UK_HQ": {"Group1": emea, "Group2": uk_hq},
+    "US": {"Group1": americas, "Group2": us},
+}
+
+def import_hosts(csv_file):
+    with open(csv_file, mode='r') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            hostname = row['Host name']
+            Visiblename = row['Visible name']
+            country = row['Country']
+            # templateid = row['Template ID']
+            # Group1 = row['Groupid1']
+            # Group2 = row['Groupid2']
+            ip_address = row['IP address']
+            serialnumber = row['Serial number A']
+            url = row['url_a']
+            if country in group_mapping:
+              Group1 = group_mapping[country]["Group1"]
+              Group2 = group_mapping[country]["Group2"]
+            
+            result = create_host(api_key, hostname, Visiblename, ip_address, Group1, Group2, serialnumber, url)
+            
+            if 'error' in result:
+                print(f"Failed to create host {hostname}: {result['error']['data']}")
+            else:
+                print(f"Host {hostname} created successfully with hostid {result['result']['hostids'][0]}")
+
+if __name__ == "__main__":
+    csv_file = "Template with next 10 Shops.csv"
+    import_hosts(csv_file)
